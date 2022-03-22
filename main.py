@@ -1,6 +1,8 @@
 import os
 import shutil
 import time
+import platform
+
 import schedule as schedule
 import wget
 import logging
@@ -19,6 +21,22 @@ dict_mark = {
     'marker_status': 0,
     'marker_delete': 0
 }
+
+
+# def watch_file_update(path):
+#   timestamp = os.stat(path).st_mtime
+#   while 1:
+#     if timestamp != os.stat(path).st_mtime:
+#       timestamp = os.stat(path).st_mtime
+#       print('Файл изменён!')
+#       return timestamp
+#
+# print(watch_file_update("main.py"))
+
+
+def open_date(path_to_file):
+        stat = os.stat(path_to_file).st_atime
+        return stat
 
 def time_timestamp():
     ts = time.time()
@@ -54,6 +72,7 @@ def check_file(file):
 
 def start_job():
     try:
+        dict_mark.update(marker_status=1)
         session = requests.Session()
 
         r = session.get(
@@ -91,16 +110,19 @@ def start_job():
                                                         f"server hash1::{type_l['md5sum']} local hash::{md5_hash} сходятся")
                                                     # logger.info(f"server hash::{type_l['md5sum']}=local hash::{md5_hash}")
                                                     print("заебок")
+
                                                     dict_mark.update(marker_status=0)
                                                 else:
                                                     print(f"вес не сходится, удаляю {full_path}")
                                                     print(
                                                         f"вес локальный: {os.path.getsize(full_path)} вес серверный {type_l['size']} ")
+                                                    # File corrupted
                                                     remove_file(full_path)
                                             else:
                                                 print(
                                                     f"server hash1::{type_l['md5sum']} local hash::{md5_hash} не сходятся")
                                                 remove_file(full_path)
+                                                #File corrupted
                                                 print("удаляю")
                                         else:
                                             print("нет такого ключа")
@@ -162,17 +184,32 @@ def delete_old_content():
             print(f"результат вычитания времени {time_timestamp() - date_file}")
             # print(time_timestamp() - date_file > 10000000)
             # if UTC - date_file > 10000000:
+
             if time_timestamp() - date_file > 10:
                 #todo поправить время с 10 до 10000000
-                try:
-                    # if os.path.getctime(f"{path_for_del}/{str1}")
-                    # os.remove(os.path.join(path_for_del, str1))
-                    print("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓")
-                    print(f"обнаружен враждебный файл: удаляю {str1}")
-                    print("↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑")
-                    print("####################################################################")
-                except:
-                    print(f"обнаружена разница в списках: {str1} возможно файл еще не скачан")
+                if check_file(f"{path_for_del}/{str1}"):
+                    try:
+                        change_file = open_date(f"{path_for_del}/{str1}")
+                        result_change_file = datetime.datetime.fromtimestamp(change_file).strftime('%Y-%m-%d %H:%M:%S')
+
+                        print(f"файл был изменен {path_for_del}/{str1} в {result_change_file}")
+                        # if os.path.getctime(f"{path_for_del}/{str1}")
+                        # timestamp_f = os.stat(f"{path_for_del}/{str1}").st_mtime
+                        # print(timestamp_f)
+
+
+                        print("↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓")
+                        print(f"обнаружен враждебный файл: удаляю {str1}")
+                        print("↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑")
+                        #todo надо раскоментить делит в конце ↓↓↓↓↓↓↓↓↓↓↓
+                        #os.remove(os.path.join(path_for_del, str1))
+                        print("####################################################################")
+                    except:
+                        print(f"обнаружена разница в списках: {str1} возможно файл еще не скачан")
+                else:
+                    print(f"{path_for_del}/{str1}")
+            else:
+                print("файл слишком молод что бы умирать")
             list_file_web.clear()
             list_file_os.clear()
     else:
